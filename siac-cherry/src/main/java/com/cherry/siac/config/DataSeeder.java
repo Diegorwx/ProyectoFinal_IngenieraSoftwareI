@@ -3,8 +3,10 @@ package com.cherry.siac.config;
 import com.cherry.siac.dto.ItemPedidoRequest;
 import com.cherry.siac.dto.PedidoRequest;
 import com.cherry.siac.modelo.Cliente;
+import com.cherry.siac.modelo.Pedido;
 import com.cherry.siac.modelo.Producto;
 import com.cherry.siac.modelo.enums.EstadoCliente;
+import com.cherry.siac.modelo.enums.EstadoPedido;
 import com.cherry.siac.modelo.enums.EstadoProducto;
 import com.cherry.siac.modelo.enums.TipoEntrega;
 import com.cherry.siac.repositorio.ClienteRepositorio;
@@ -19,7 +21,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 // DataSeeder — carga los datos de prueba al arrancar (quedan en memoria).
-// 10 clientes (8 activos, 2 inactivos), 20 productos (2 agotados) y 1 pedido de ejemplo.
+// 10 clientes (8 activos, 2 inactivos), 20 productos (2 agotados) y 8 pedidos en todos los estados.
 @Component
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
@@ -36,7 +38,7 @@ public class DataSeeder implements CommandLineRunner {
         }
         cargarClientes();
         cargarProductos();
-        cargarPedidoDeEjemplo();
+        cargarPedidosDeEjemplo();
 
         System.out.println("=================================================");
         System.out.println("  SIAC Cherry - datos de prueba en memoria");
@@ -83,20 +85,64 @@ public class DataSeeder implements CommandLineRunner {
         productoRepositorio.save(new Producto(null, "Base de maquillaje", "", "Natural", new BigDecimal("42000"), 9, EstadoProducto.DISPONIBLE));
     }
 
-    // Un pedido de Andrea Muñoz (cliente 1): 2 blusas M rojas y 1 bolso negro, a domicilio
-    private void cargarPedidoDeEjemplo() {
-        ItemPedidoRequest blusa = new ItemPedidoRequest();
-        blusa.setProductoId(1L);
-        blusa.setCantidad(2);
-        ItemPedidoRequest bolso = new ItemPedidoRequest();
-        bolso.setProductoId(12L);
-        bolso.setCantidad(1);
+    // Pedidos de ejemplo en todos los estados, para los paneles de Pedidos y Clientes.
+    // Se crean con PedidoServicio (mismas reglas que la pantalla) y luego se ajustan
+    // fechas y estados para simular pedidos antiguos.
+    private void cargarPedidosDeEjemplo() {
+        // PED-1 · Andrea Muñoz · pendiente de pago (Blusa M Rojo y Bolso Negro quedan "en pedido activo")
+        crear(1L, TipoEntrega.DOMICILIO_ARMENIA, 8, 0, null, null, item(1L, 2), item(12L, 1));
 
-        PedidoRequest pedido = new PedidoRequest();
-        pedido.setClienteId(1L);
-        pedido.setItems(List.of(blusa, bolso));
-        pedido.setFechaLimitePago(LocalDate.now().plusDays(8));
-        pedido.setTipoEntrega(TipoEntrega.DOMICILIO_ARMENIA);
-        pedidoServicio.registrarPedido(pedido);
+        // PED-2 · Mario Gómez · entregado en tienda hace 10 días
+        crear(2L, TipoEntrega.TIENDA, 5, 12, EstadoPedido.ENTREGADO, null, item(5L, 2), item(16L, 3));
+
+        // PED-3 · Laura Restrepo · pagado, pendiente de entrega a domicilio
+        crear(3L, TipoEntrega.DOMICILIO_ARMENIA, 6, 2, EstadoPedido.PAGADO, null, item(8L, 1), item(19L, 2));
+
+        // PED-4 · Camila Ospina · envío nacional entregado
+        crear(4L, TipoEntrega.ENVIO_NACIONAL, 5, 20, EstadoPedido.ENTREGADO, "SERV-48213", item(6L, 1));
+
+        // PED-5 · Valentina Cárdenas · cancelado por plazo de pago vencido (RN-013)
+        Pedido cancelado = crear(5L, TipoEntrega.DOMICILIO_ARMENIA, 5, 15, null, null, item(14L, 1), item(15L, 2));
+        pedidoServicio.cancelarPedido(cancelado.getId());
+
+        // PED-6 · Andrea Muñoz · segunda compra, entregada en tienda hace un mes
+        crear(1L, TipoEntrega.TIENDA, 5, 30, EstadoPedido.ENTREGADO, null, item(20L, 1), item(17L, 1));
+
+        // PED-7 · Juliana Marín · pendiente de pago con envío nacional
+        crear(6L, TipoEntrega.ENVIO_NACIONAL, 3, 1, null, null, item(10L, 1));
+
+        // PED-8 · Daniela Londoño · pagado, pendiente de envío nacional
+        crear(7L, TipoEntrega.ENVIO_NACIONAL, 7, 3, EstadoPedido.PAGADO, null, item(13L, 1), item(16L, 1));
+    }
+
+    // plazoDias: días para pagar desde la fecha del pedido · haceDias: antigüedad del pedido
+    private Pedido crear(Long clienteId, TipoEntrega entrega, int plazoDias, int haceDias,
+                         EstadoPedido estadoFinal, String numeroGuia, ItemPedidoRequest... items) {
+        LocalDate hoy = LocalDate.now();
+        PedidoRequest dto = new PedidoRequest();
+        dto.setClienteId(clienteId);
+        dto.setItems(List.of(items));
+        dto.setFechaLimitePago(hoy.plusDays(1));   // fecha válida para pasar la regla RN-013
+        dto.setTipoEntrega(entrega);
+        Pedido pedido = pedidoServicio.registrarPedido(dto);
+
+        LocalDate fecha = hoy.minusDays(haceDias);
+        pedido.setFecha(fecha);
+        pedido.setFechaLimitePago(fecha.plusDays(plazoDias));
+        if (estadoFinal != null) {
+            pedido.setEstadoPedido(estadoFinal);
+        }
+        if (estadoFinal == EstadoPedido.ENTREGADO) {
+            pedido.setFechaEntrega(fecha.plusDays(Math.min(4, haceDias)));
+            pedido.setNumeroGuia(numeroGuia);
+        }
+        return pedidoRepositorio.save(pedido);
+    }
+
+    private ItemPedidoRequest item(Long productoId, int cantidad) {
+        ItemPedidoRequest item = new ItemPedidoRequest();
+        item.setProductoId(productoId);
+        item.setCantidad(cantidad);
+        return item;
     }
 }

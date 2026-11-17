@@ -10,7 +10,7 @@ export function Badge({ estado }) {
     DISPONIBLE:        { cls: 'badge-success', label: 'Disponible' },
     AGOTADO:           { cls: 'badge-danger',  label: 'Agotado' },
     PENDIENTE_DE_PAGO: { cls: 'badge-pending', label: 'Pendiente de pago' },
-    PAGADO:            { cls: 'badge-success', label: 'Pagado' },
+    PAGADO:            { cls: 'badge-info',    label: 'Pagado' },
     ENTREGADO:         { cls: 'badge-success', label: 'Entregado' },
     CANCELADO:         { cls: 'badge-neutral', label: 'Cancelado' },
   }

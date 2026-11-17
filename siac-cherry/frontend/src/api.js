@@ -21,6 +21,7 @@ const post = (data) => ({ method: 'POST', headers: JSON_HEADERS, body: JSON.stri
 const put  = (data) => ({ method: 'PUT',  headers: JSON_HEADERS, body: JSON.stringify(data) })
 
 export const clientesApi = {
+  listarTodos: ()  => apiFetch('/api/clientes'),                                  // GET  /api/clientes
   buscar: (q)    => apiFetch(`/api/clientes?query=${encodeURIComponent(q)}`),   // GET  /api/clientes?query=
   crear:  (data) => apiFetch('/api/clientes', post(data)),                      // POST /api/clientes (CUS-02 FA-2)
 }
@@ -35,7 +36,8 @@ export const productosApi = {
 
 export const pedidosApi = {
   crear:    (data) => apiFetch('/api/pedidos', post(data)),                          // POST  /api/pedidos (CUS-02)
-  todos:    ()     => apiFetch('/api/pedidos'),                                      // GET   /api/pedidos
+  todos:      ()     => apiFetch('/api/pedidos'),                                    // GET   /api/pedidos
+  porCliente: (id)   => apiFetch(`/api/pedidos?clienteId=${id}`),                    // GET   /api/pedidos?clienteId=
   cancelar: (id)   => apiFetch(`/api/pedidos/${id}/cancelar`, { method: 'PATCH' }),  // PATCH /api/pedidos/{id}/cancelar (FA-6)
 }
 
@@ -72,3 +74,11 @@ export const TIPOS_ENTREGA = [
   { valor: 'DOMICILIO_ARMENIA', texto: 'Domicilio en Armenia (+$5.000)' },
   { valor: 'ENVIO_NACIONAL',    texto: 'Envío nacional' },
 ]
+
+const ENTREGA_CORTA = { TIENDA: 'Tienda', DOMICILIO_ARMENIA: 'Domicilio Armenia', ENVIO_NACIONAL: 'Envío nacional' }
+export const textoEntregaCorto = (valor) => ENTREGA_CORTA[valor] || valor
+
+export const textoEntrega = (valor) => (TIPOS_ENTREGA.find(t => t.valor === valor) || { texto: valor }).texto
+
+// Total de unidades de un pedido
+export const unidadesPedido = (pedido) => pedido.detalles.reduce((s, d) => s + d.cantidad, 0)

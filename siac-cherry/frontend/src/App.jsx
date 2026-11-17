@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import RegistrarPedido from './screens/RegistrarPedido.jsx'
 import Productos from './screens/Productos.jsx'
-import { IconBag, IconBox } from './icons.jsx'
+import Pedidos from './screens/Pedidos.jsx'
+import Clientes from './screens/Clientes.jsx'
+import { IconBag, IconBox, IconReceipt, IconUser } from './icons.jsx'
 
 export default function App() {
   const [tab, setTab] = useState('pedido')
@@ -17,14 +19,7 @@ export default function App() {
     <div className="app">
       <aside className="sidebar">
         <div className="sb-brand">
-          <div className="sb-mark">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white"
-                 strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="8" cy="16" r="4" />
-              <circle cx="17" cy="17" r="3.5" />
-              <path d="M8 12c1-5 5-8 10-9M17 13.5c0-4 0-7 1-10.5" />
-            </svg>
-          </div>
+          <img className="sb-mark-img" src="/favicon.png" alt="Cherry" />
           <div className="sb-brand-text">
             <div className="t1">SIAC · Cherry</div>
             <div className="t2">Atención al cliente</div>
@@ -43,6 +38,18 @@ export default function App() {
           </nav>
         </div>
 
+        <div>
+          <div className="sb-section-label">Consulta</div>
+          <nav className="sb-nav">
+            <button className={'sb-link ' + (tab === 'pedidos' ? 'active' : '')} onClick={() => setTab('pedidos')}>
+              <IconReceipt size={16} /> Pedidos
+            </button>
+            <button className={'sb-link ' + (tab === 'clientes' ? 'active' : '')} onClick={() => setTab('clientes')}>
+              <IconUser size={16} /> Clientes
+            </button>
+          </nav>
+        </div>
+
         <div className="sb-foot">
           <div className="sb-avatar">ER</div>
           <div style={{ lineHeight: 1.2 }}>
@@ -55,6 +62,8 @@ export default function App() {
       <main className="main">
         {tab === 'pedido' && <RegistrarPedido pushToast={pushToast} />}
         {tab === 'productos' && <Productos pushToast={pushToast} />}
+        {tab === 'pedidos' && <Pedidos pushToast={pushToast} />}
+        {tab === 'clientes' && <Clientes />}
       </main>
 
       <div className="toast-stack">
